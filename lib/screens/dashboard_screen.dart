@@ -20,6 +20,8 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
+
+
 class _DashboardScreenState extends State<DashboardScreen> {
   int _totalMl = 0;
   int _goalMl = 2000;
@@ -84,15 +86,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .schema('waterapp')
           .rpc('get_daily_goal', params: {'p_user_id': uid});
 
-      final today = DateTime.now();
-      final startOfDay = DateTime.utc(today.year, today.month, today.day)
+      final nowUtc = DateTime.now().toUtc();
+      final startOfDayUtc = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day)
+          .toIso8601String();
+      final endOfDayUtc = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day, 23, 59, 59)
           .toIso8601String();
 
       final logsRes = await db
           .from('logs')
           .select('amount_ml')
           .eq('user_id', uid)
-          .gte('logged_at', startOfDay);
+          .gte('logged_at', startOfDayUtc)
+          .lte('logged_at', endOfDayUtc);
 
       final streakRes = await db
           .from('streaks')
@@ -147,7 +152,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     // Guardar localmente primero
     final logData = {
-      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'id': DateTime
+          .now()
+          .millisecondsSinceEpoch
+          .toString(),
       'user_id': uid,
       'amount_ml': ml,
       'drink_type': 'water',
@@ -181,7 +189,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Registrado sin conexión. Se sincronizará cuando haya internet'),
+              content: Text(
+                  'Registrado sin conexión. Se sincronizará cuando haya internet'),
               backgroundColor: Color(0xFF4A90D9),
             ),
           );
@@ -223,11 +232,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return 'Tu mascota tiene sed... ¡hidrátatе! 😟';
   }
 
+  bool get _showMainHeader => _selectedIndex == 0;
+
   Widget _buildScreen() {
     switch (_selectedIndex) {
       case 0:
         return _loading
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFF4A90D9)))
+            ? const Center(
+            child: CircularProgressIndicator(color: Color(0xFF4A90D9)))
             : RefreshIndicator(
           onRefresh: _loadData,
           child: SingleChildScrollView(
@@ -281,14 +293,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         bottom: false,
         child: Column(
           children: [
-            DashboardHeader(
-              streak: _streak,
-              onLogout: _signOut,
-            ),
+            if (_showMainHeader)
+              DashboardHeader(
+                streak: _streak,
+                onLogout: _signOut,
+              ),
             Expanded(child: _buildScreen()),
             DashboardBottomNav(
               selectedIndex: _selectedIndex,
-              onTabChanged: (index) => setState(() => _selectedIndex = index),
+              onTabChanged: (index) {
+                setState(() => _selectedIndex = index);
+                if (index == 0) _loadData();
+              },
             ),
           ],
         ),

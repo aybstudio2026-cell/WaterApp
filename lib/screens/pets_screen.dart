@@ -31,26 +31,42 @@ class _PetsScreenState extends State<PetsScreen> {
     try {
       final db = Supabase.instance.client.schema('waterapp');
 
-      // Intentar cargar desde Supabase
-      final allPets = await db.from('pets').select().order('price');
+      // Cargar todo en paralelo para mayor velocidad
+      final results = await Future.wait([
+        db.from('pets').select().order('price'),
+        db.from('user_pets').select('pet_id').eq('user_id', uid),
+        db.from('profiles').select('active_pet_id').eq('user_id', uid).maybeSingle(),
+        Supabase.instance.client
+            .from('profiles')
+            .select('balance')
+            .eq('id', uid)
+            .maybeSingle(),
+      ]);
 
-      // Guardar en caché
-      await CacheService.savePets(List<Map<String, dynamic>>.from(allPets as List));
+      final allPets   = results[0] as List;
+      final userPets  = results[1] as List;
+      final profile   = results[2] as Map<String, dynamic>?;
+      final pubProfile = results[3] as Map<String, dynamic>?;
 
-      // Pre-descargar imágenes
-      for (final pet in allPets as List) {
-        final petData = pet as Map<String, dynamic>;
-        if (petData['base_url'] != null) {
-          await CacheService.downloadAndCacheImage(
-            petData['base_url'] as String,
-            '${petData['slug']}_normal',
-          );
-        }
-      }
+      // Guardar mascotas en caché
+      await CacheService.savePets(
+        List<Map<String, dynamic>>.from(allPets),
+      );
 
-      // ... resto del método igual
+      // Pre-descargar imágenes en background sin bloquear la UI
+      _prefetchImages(allPets);
+
+      setState(() {
+        _allPets     = List<Map<String, dynamic>>.from(allPets);
+        _ownedIds    = userPets.map((p) => p['pet_id'] as String).toList();
+        _activePetId = profile?['active_pet_id'] as String?;
+        _balance     = (pubProfile?['balance'] as int?) ?? 0;
+        _loading     = false;
+      });
+
     } catch (e) {
       debugPrint('Error cargando mascotas: $e');
+
       // Fallback al caché si no hay conexión
       final cachedPets = CacheService.getPets();
       if (cachedPets.isNotEmpty) {
@@ -61,6 +77,32 @@ class _PetsScreenState extends State<PetsScreen> {
         return;
       }
       setState(() => _loading = false);
+    }
+  }
+
+// Descarga imágenes en background sin bloquear la UI
+  void _prefetchImages(List allPets) {
+    for (final pet in allPets) {
+      final petData = pet as Map<String, dynamic>;
+      final slug = petData['slug'] as String? ?? '';
+      if (petData['base_url'] != null) {
+        CacheService.downloadAndCacheImage(
+          petData['base_url'] as String,
+          '${slug}_normal',
+        );
+      }
+      if (petData['hydrated_url'] != null) {
+        CacheService.downloadAndCacheImage(
+          petData['hydrated_url'] as String,
+          '${slug}_hydrated',
+        );
+      }
+      if (petData['dehydrated_url'] != null) {
+        CacheService.downloadAndCacheImage(
+          petData['dehydrated_url'] as String,
+          '${slug}_dehydrated',
+        );
+      }
     }
   }
 
@@ -146,7 +188,7 @@ class _PetsScreenState extends State<PetsScreen> {
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [

@@ -66,14 +66,12 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Logros',
                       style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1A2E6E))),
-                  Text('$unlockedCount de ${kAchievements.length} desbloqueados',
-                      style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280))),
                   const SizedBox(height: 14),
                   // Barra de progreso general
                   ClipRRect(
