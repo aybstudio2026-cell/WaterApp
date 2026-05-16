@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../main.dart';
 import '../theme/app_theme.dart';
+import '../widgets/settings_account_section.dart';
+import '../widgets/settings_premium_banner.dart';
+import '../widgets/settings_appearance_section.dart';
+import '../widgets/settings_hydration_section.dart';
+import '../widgets/settings_schedules_section.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -40,20 +45,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final db = Supabase.instance.client.schema('waterapp');
       final results = await Future.wait([
-        db.from('profiles')
-            .select('weight_kg, activity_level, wake_time, sleep_time')
-            .eq('user_id', user.id)
-            .maybeSingle(),
-        Supabase.instance.client
-            .from('profiles')
-            .select('balance')
-            .eq('id', user.id)
-            .maybeSingle(),
-        db.from('subscriptions')
-            .select('status')
-            .eq('user_id', user.id)
-            .eq('status', 'active')
-            .maybeSingle(),
+        db.from('profiles').select('weight_kg, activity_level, wake_time, sleep_time').eq('user_id', user.id).maybeSingle(),
+        Supabase.instance.client.from('profiles').select('balance').eq('id', user.id).maybeSingle(),
+        db.from('subscriptions').select('status').eq('user_id', user.id).eq('status', 'active').maybeSingle(),
       ]);
 
       final profile    = results[0] as Map<String, dynamic>?;
@@ -150,14 +144,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 24),
             const Text('⭐', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 12),
-            Text('WaterApp Premium',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: c.textPrimary)),
+            Text('WaterApp Premium', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: c.textPrimary)),
             const SizedBox(height: 8),
-            Text('Desbloquea todo el potencial de la app',
-                style: TextStyle(fontSize: 14, color: c.textMuted), textAlign: TextAlign.center),
+            Text('Desbloquea todo el potencial de la app', style: TextStyle(fontSize: 14, color: c.textMuted), textAlign: TextAlign.center),
             const SizedBox(height: 24),
-
-            // Features premium
             ...[
               ('Meta personalizada por peso y actividad', '🎯'),
               ('Mascotas premium con coins', '🐾'),
@@ -176,10 +166,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             )),
-
             const SizedBox(height: 24),
-
-            // Planes
             Row(
               children: [
                 Expanded(child: _planCard('\$2.99', 'Mensual', c)),
@@ -188,7 +175,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
             const SizedBox(height: 16),
-
             SizedBox(
               width: double.infinity,
               height: 52,
@@ -196,12 +182,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onPressed: () {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Redirigiendo a la tienda A&B Studio...'),
-                      backgroundColor: Color(0xFF2D5BE3),
-                    ),
+                    const SnackBar(content: Text('Redirigiendo a la tienda A&B Studio...'), backgroundColor: Color(0xFF2D5BE3)),
                   );
-                  // TODO: abrir URL de pago DodoPayments
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2D5BE3),
@@ -209,8 +191,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                child: const Text('Activar Premium',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                child: const Text('Activar Premium', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ),
             const SizedBox(height: 8),
@@ -231,24 +212,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       decoration: BoxDecoration(
         color: highlight ? const Color(0xFF2D5BE3) : c.card2,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: highlight ? const Color(0xFF2D5BE3) : c.border,
-        ),
+        border: Border.all(color: highlight ? const Color(0xFF2D5BE3) : c.border),
       ),
       child: Column(
         children: [
-          Text(price,
-              style: TextStyle(
-                fontSize: 20, fontWeight: FontWeight.bold,
-                color: highlight ? Colors.white : c.textPrimary,
-              )),
+          Text(price, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: highlight ? Colors.white : c.textPrimary)),
           const SizedBox(height: 4),
-          Text(label,
-              style: TextStyle(
-                fontSize: 12,
-                color: highlight ? Colors.white70 : c.textMuted,
-              ),
-              textAlign: TextAlign.center),
+          Text(label, style: TextStyle(fontSize: 12, color: highlight ? Colors.white70 : c.textMuted), textAlign: TextAlign.center),
         ],
       ),
     );
@@ -267,117 +237,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Ajustes',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: c.textPrimary)),
+              Text('Ajustes', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: c.textPrimary)),
               const SizedBox(height: 20),
 
-              // ── CUENTA ──────────────────────────
-              _sectionTitle('Cuenta', c),
-              _infoCard([
-                _infoRow(Icons.email_outlined, 'Correo', _email, c),
-                _divider(c),
-                _infoRow(Icons.bolt_outlined, 'Balance', '$_balance coins', c),
-                _divider(c),
-                _infoRow(
-                  _isPremium ? Icons.star : Icons.star_border,
-                  'Plan',
-                  _isPremium ? 'Premium ✓' : 'Gratuito',
-                  c,
-                  valueColor: _isPremium ? const Color(0xFF2D7A4F) : null,
-                ),
-              ], c),
-
+              // ── SECCIÓN CUENTA ──
+              SettingsAccountSection(email: _email, balance: _balance, isPremium: _isPremium),
               const SizedBox(height: 12),
 
-              // Botón Premium
-              if (!_isPremium)
-                _premiumBanner(c),
+              // Banner Premium Conditional
+              if (!_isPremium) ...[
+                SettingsPremiumBanner(onTap: _showPremiumModal),
+                const SizedBox(height: 20),
+              ],
 
+              // ── SECCIÓN APARIENCIA ──
+              const SettingsAppearanceSection(),
               const SizedBox(height: 20),
 
-              // ── APARIENCIA ───────────────────────
-              _sectionTitle('Apariencia', c),
-              _card(
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          themeService.isDark ? Icons.dark_mode : Icons.light_mode,
-                          size: 20, color: const Color(0xFF9CA3AF),
-                        ),
-                        const SizedBox(width: 12),
-                        Text('Modo oscuro',
-                            style: TextStyle(fontSize: 14, color: c.textSecondary)),
-                      ],
-                    ),
-                    Switch(
-                      value: themeService.isDark,
-                      onChanged: (_) => themeService.toggle(),
-                      activeColor: const Color(0xFF2D5BE3),
-                    ),
-                  ],
-                ),
-                c,
+              // ── SECCIÓN PERFIL DE HIDRATACIÓN ──
+              SettingsHydrationSection(
+                weightKg: _weightKg,
+                activityLevel: _activityLevel,
+                onWeightChanged: (v) => setState(() => _weightKg = v),
+                onActivityChanged: (v) => setState(() => _activityLevel = v),
               ),
-
               const SizedBox(height: 20),
 
-              // ── PERFIL DE HIDRATACIÓN ────────────
-              _sectionTitle('Perfil de hidratación', c),
-              _card(
-                Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Peso',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: c.textSecondary)),
-                        Text('${_weightKg.toInt()} kg',
-                            style: const TextStyle(fontSize: 14, color: Color(0xFF4A90D9), fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                    Slider(
-                      value: _weightKg, min: 40, max: 150, divisions: 110,
-                      activeColor: const Color(0xFF4A90D9),
-                      onChanged: (v) => setState(() => _weightKg = v),
-                    ),
-                    Divider(color: c.border),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text('Nivel de actividad',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: c.textSecondary)),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        _activityBtn('low',    'Bajo',  '🧘', c),
-                        const SizedBox(width: 8),
-                        _activityBtn('medium', 'Medio', '🚶', c),
-                        const SizedBox(width: 8),
-                        _activityBtn('high',   'Alto',  '🏃', c),
-                      ],
-                    ),
-                  ],
-                ),
-                c,
+              // ── SECCIÓN HORARIOS ──
+              SettingsSchedulesSection(
+                wakeTime: _wakeTime,
+                sleepTime: _sleepTime,
+                onWakeTimeTap: () => _pickTime(true),
+                onSleepTimeTap: () => _pickTime(false),
               ),
-
               const SizedBox(height: 20),
 
-              // ── HORARIOS ─────────────────────────
-              _sectionTitle('Horarios de recordatorio', c),
-              _infoCard([
-                _timeRow('Hora de despertar', _wakeTime, () => _pickTime(true), c),
-                _divider(c),
-                _timeRow('Hora de dormir', _sleepTime, () => _pickTime(false), c),
-              ], c),
-
-              const SizedBox(height: 20),
-
-              // Guardar
+              // Botón Guardar cambios
               SizedBox(
                 width: double.infinity, height: 52,
                 child: ElevatedButton(
@@ -389,16 +284,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   child: _saving
-                      ? const SizedBox(width: 22, height: 22,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Guardar cambios',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('Guardar cambios', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
-
               const SizedBox(height: 12),
 
-              // Cerrar sesión
+              // Botón Cerrar sesión
               SizedBox(
                 width: double.infinity, height: 52,
                 child: OutlinedButton(
@@ -408,15 +300,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     side: const BorderSide(color: Colors.redAccent),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  child: const Text('Cerrar sesión',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  child: const Text('Cerrar sesión', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
-
               const SizedBox(height: 30),
               Center(
-                child: Text('WaterApp — A&B Studio © 2026',
-                    style: TextStyle(fontSize: 12, color: c.textMuted)),
+                child: Text('WaterApp — A&B Studio © 2026', style: TextStyle(fontSize: 12, color: c.textMuted)),
               ),
             ],
           ),
@@ -424,121 +313,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-
-  Widget _premiumBanner(AppColors c) {
-    return GestureDetector(
-      onTap: _showPremiumModal,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF2D5BE3), Color(0xFF4A90D9)],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            const Text('⭐', style: TextStyle(fontSize: 28)),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Activa Premium',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-                  Text('Desbloquea mascotas, historial y más',
-                      style: TextStyle(fontSize: 12, color: Colors.white70)),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white70),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String text, AppColors c) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Text(text,
-        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-            color: c.textMuted, letterSpacing: 0.5)),
-  );
-
-  Widget _card(Widget child, AppColors c) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: c.card,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-          blurRadius: 8, offset: const Offset(0, 2))],
-    ),
-    child: child,
-  );
-
-  Widget _infoCard(List<Widget> children, AppColors c) => _card(Column(children: children), c);
-  Widget _divider(AppColors c) => Divider(color: c.border, height: 1);
-
-  Widget _infoRow(IconData icon, String label, String value, AppColors c, {Color? valueColor}) =>
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            Icon(icon, size: 18, color: const Color(0xFF9CA3AF)),
-            const SizedBox(width: 12),
-            Text(label, style: TextStyle(fontSize: 14, color: c.textSecondary)),
-            const Spacer(),
-            Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500,
-                color: valueColor ?? c.textPrimary)),
-          ],
-        ),
-      );
-
-  Widget _timeRow(String label, TimeOfDay time, VoidCallback onTap, AppColors c) =>
-      InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            children: [
-              const Icon(Icons.access_time_outlined, size: 18, color: Color(0xFF9CA3AF)),
-              const SizedBox(width: 12),
-              Text(label, style: TextStyle(fontSize: 14, color: c.textSecondary)),
-              const Spacer(),
-              Text(time.format(context),
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF4A90D9))),
-              const SizedBox(width: 4),
-              Icon(Icons.chevron_right, size: 16, color: c.textMuted),
-            ],
-          ),
-        ),
-      );
-
-  Widget _activityBtn(String value, String label, String emoji, AppColors c) => Expanded(
-    child: GestureDetector(
-      onTap: () => setState(() => _activityLevel = value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: _activityLevel == value ? const Color(0xFF2D5BE3) : c.card2,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 20)),
-            const SizedBox(height: 4),
-            Text(label, style: TextStyle(
-              fontSize: 12, fontWeight: FontWeight.w500,
-              color: _activityLevel == value ? Colors.white : c.textSecondary,
-            )),
-          ],
-        ),
-      ),
-    ),
-  );
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart'; // Importante para acceder a AppColors y AppTheme
 
 class DashboardHeader extends StatelessWidget {
   final int streak;
@@ -12,6 +13,9 @@ class DashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context); // Colores dinámicos del ThemeExtension
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final hour = DateTime.now().hour;
     final greeting = hour < 12
         ? 'Buenos días'
@@ -21,7 +25,7 @@ class DashboardHeader extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      color: const Color(0xFFF4F6FA),
+      color: c.bg, // Fondo dinámico de la app
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -29,12 +33,12 @@ class DashboardHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(greeting,
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
-              const Text('WaterApp',
+                  style: TextStyle(fontSize: 13, color: c.textMuted)),
+              Text('WaterApp',
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A2E6E))),
+                      color: c.textPrimary)),
             ],
           ),
           Row(
@@ -43,7 +47,7 @@ class DashboardHeader extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFEDD5),
+                  color: c.statOrange, // Naranja adaptativo (claro u oscuro de fondo)
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -51,10 +55,10 @@ class DashboardHeader extends StatelessWidget {
                     const Text('🔥', style: TextStyle(fontSize: 16)),
                     const SizedBox(width: 4),
                     Text('$streak días',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFFEA580C))),
+                            color: isDark ? const Color(0xFFFF8A65) : const Color(0xFFEA580C))), // Texto legible según modo
                   ],
                 ),
               ),
@@ -65,12 +69,12 @@ class DashboardHeader extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: c.card, // Fondo dinámico del botón
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                    border: Border.all(color: c.border), // Borde adaptativo
                   ),
-                  child: const Icon(Icons.logout,
-                      size: 18, color: Color(0xFF9CA3AF)),
+                  child: Icon(Icons.logout,
+                      size: 18, color: c.textMuted),
                 ),
               ),
             ],

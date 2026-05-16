@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 class StatsRow extends StatelessWidget {
   final int goalMl;
@@ -14,27 +15,29 @@ class StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+
     return Row(
       children: [
         _StatCard(
           label: 'Meta diaria',
           value: '$goalMl ml',
           icon: Icons.flag_outlined,
-          bg: const Color(0xFFD6E4FF),
+          bg: c.statBlue, // Azul adaptativo
         ),
         const SizedBox(width: 12),
         _StatCard(
           label: 'Hoy',
           value: '$totalMl ml',
           icon: Icons.water_drop_outlined,
-          bg: const Color(0xFFD6F5E3),
+          bg: c.statGreen, // Verde adaptativo
         ),
         const SizedBox(width: 12),
         _StatCard(
           label: 'Racha',
           value: '$streak días',
           icon: Icons.local_fire_department_outlined,
-          bg: const Color(0xFFFFEDD5),
+          bg: c.statOrange, // Naranja adaptativo
         ),
       ],
     );
@@ -56,6 +59,8 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -66,16 +71,15 @@ class _StatCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 20, color: const Color(0xFF1A2E6E)),
+            Icon(icon, size: 20, color: c.textPrimary),
             const SizedBox(height: 8),
             Text(value,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A2E6E))),
+                    color: c.textPrimary)),
             Text(label,
-                style:
-                const TextStyle(fontSize: 11, color: Color(0xFF6B7280))),
+                style: TextStyle(fontSize: 11, color: c.textMuted)),
           ],
         ),
       ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../theme/app_theme.dart';
+import '../widgets/achievements_header.dart';
+import '../widgets/achievements_list_card.dart';
 
-// Definición de los 12 logros
 const List<Map<String, dynamic>> kAchievements = [
   { 'key': 'first_log',      'title': 'Primera gota',       'desc': 'Registra tu primer vaso de agua',          'icon': '💧', 'req': 1 },
   { 'key': 'week_streak',    'title': 'Racha de 7 días',    'desc': 'Cumple tu meta 7 días seguidos',            'icon': '🔥', 'req': 7 },
@@ -57,125 +59,37 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final unlockedCount = _unlocked.length;
+    final c = AppColors.of(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: c.bg, // Reacciona dinámicamente al fondo oscuro
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Logros',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1A2E6E))),
-                  const SizedBox(height: 14),
-                  // Barra de progreso general
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      value: kAchievements.isEmpty ? 0 : unlockedCount / kAchievements.length,
-                      minHeight: 8,
-                      backgroundColor: const Color(0xFFE5E7EB),
-                      valueColor: const AlwaysStoppedAnimation(Color(0xFF2D5BE3)),
-                    ),
-                  ),
-                ],
-              ),
+            AchievementsHeader(
+              unlockedCount: _unlocked.length,
+              totalCount: kAchievements.length,
             ),
-
             const SizedBox(height: 20),
-
             Expanded(
               child: _loading
-                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF4A90D9)))
+                  ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryLight))
                   : RefreshIndicator(
                 onRefresh: _loadAchievements,
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                   itemCount: kAchievements.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (_, i) => _buildCard(kAchievements[i]),
+                  itemBuilder: (_, i) => AchievementsListCard(
+                    achievement: kAchievements[i],
+                    isUnlocked: _unlocked.contains(kAchievements[i]['key']),
+                  ),
                 ),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildCard(Map<String, dynamic> achievement) {
-    final unlocked = _unlocked.contains(achievement['key']);
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: unlocked ? Colors.white : const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: unlocked ? const Color(0xFF2D5BE3).withValues(alpha: 0.3) : const Color(0xFFE5E7EB),
-        ),
-        boxShadow: unlocked
-            ? [BoxShadow(color: const Color(0xFF2D5BE3).withValues(alpha: 0.08),
-            blurRadius: 12, offset: const Offset(0, 3))]
-            : [],
-      ),
-      child: Row(
-        children: [
-          // Ícono
-          Container(
-            width: 52, height: 52,
-            decoration: BoxDecoration(
-              color: unlocked ? const Color(0xFFD6E4FF) : const Color(0xFFE5E7EB),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Center(
-              child: Text(
-                unlocked ? achievement['icon'] as String : '🔒',
-                style: const TextStyle(fontSize: 24),
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-
-          // Texto
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(achievement['title'] as String,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: unlocked ? const Color(0xFF1A2E6E) : const Color(0xFF9CA3AF),
-                    )),
-                const SizedBox(height: 3),
-                Text(achievement['desc'] as String,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: unlocked ? const Color(0xFF6B7280) : const Color(0xFFD1D5DB),
-                    )),
-              ],
-            ),
-          ),
-
-          // Badge desbloqueado
-          if (unlocked)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFD6F5E3),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Text('✓',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF2D7A4F), fontWeight: FontWeight.bold)),
-            ),
-        ],
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../theme/app_theme.dart'; // Importante para acceder a AppColors y AppTheme
 import '../widgets/dashboard_header.dart';
 import '../widgets/dashboard_pet_card.dart';
 import '../widgets/dashboard_water_buttons.dart';
@@ -9,7 +10,6 @@ import 'stats_screen.dart';
 import 'pets_screen.dart';
 import 'achievements_screen.dart';
 import 'settings_screen.dart';
-import 'dart:typed_data';
 import '../services/cache_service.dart';
 import '../services/connectivity_service.dart';
 
@@ -19,8 +19,6 @@ class DashboardScreen extends StatefulWidget {
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
-
-
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _totalMl = 0;
@@ -50,7 +48,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
 
-    // Sincronizar logs pendientes
     await CacheService.syncPendingLogs((log) async {
       await Supabase.instance.client
           .schema('waterapp')
@@ -61,7 +58,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
     });
 
-    // Recargar datos desde Supabase
     await _loadData();
 
     if (mounted) {
@@ -150,12 +146,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
 
-    // Guardar localmente primero
     final logData = {
-      'id': DateTime
-          .now()
-          .millisecondsSinceEpoch
-          .toString(),
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
       'user_id': uid,
       'amount_ml': ml,
       'drink_type': 'water',
@@ -166,7 +158,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final hasConnection = await ConnectivityService.hasConnection();
 
       if (hasConnection) {
-        // Si hay conexión, enviar a Supabase
         final res = await Supabase.instance.client
             .schema('waterapp')
             .rpc('log_water', params: {
@@ -177,10 +168,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         _updateUIAfterLog(res);
       } else {
-        // Sin conexión, guardar localmente
         await CacheService.savePendingLog(logData);
 
-        // Actualizar UI optimistamente
         setState(() {
           _totalMl += ml;
           _goalMl = _goalMl > 0 ? _goalMl : 2000;
@@ -189,16 +178,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text(
-                  'Registrado sin conexión. Se sincronizará cuando haya internet'),
-              backgroundColor: Color(0xFF4A90D9),
+              content: Text('Registrado sin conexión. Se sincronizará cuando haya internet'),
+              backgroundColor: AppTheme.primaryLight,
             ),
           );
         }
       }
     } catch (e) {
       debugPrint('Error registrando agua: $e');
-      // Guardamos localmente como fallback
       await CacheService.savePendingLog(logData);
     }
   }
@@ -206,7 +193,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _updateUIAfterLog(Map<String, dynamic> res) {
     final newTotal = res['total_today'] as int;
     final goal = res['goal'] as int;
-    final pct = goal > 0 ? newTotal / goal : 0.0;
 
     if (res['goal_reached'] == true) {
       setState(() => _streak = (res['current_streak'] ?? _streak) as int);
@@ -235,11 +221,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool get _showMainHeader => _selectedIndex == 0;
 
   Widget _buildScreen() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     switch (_selectedIndex) {
       case 0:
         return _loading
-            ? const Center(
-            child: CircularProgressIndicator(color: Color(0xFF4A90D9)))
+            ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryLight))
             : RefreshIndicator(
           onRefresh: _loadData,
           child: SingleChildScrollView(
@@ -254,9 +241,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   statusText: _getPetStatus(),
                   statusColor: _goalMl > 0
                       ? (_totalMl / _goalMl) >= 0.8
-                      ? const Color(0xFF2D7A4F)
+                      ? (isDark ? const Color(0xFF63E6BE) : const Color(0xFF2D7A4F))
                       : (_totalMl / _goalMl) >= 0.4
-                      ? const Color(0xFF4A90D9)
+                      ? AppTheme.primaryLight
                       : const Color(0xFFDC2626)
                       : const Color(0xFFDC2626),
                 ),
@@ -287,8 +274,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context); // Captura los colores adaptativos de tu ThemeExtension
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: c.bg, // Cambia automáticamente de color entre modos
       body: SafeArea(
         bottom: false,
         child: Column(

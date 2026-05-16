@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 class WaterButtonsSection extends StatelessWidget {
   final Function(int) onLogWater;
@@ -10,35 +11,38 @@ class WaterButtonsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Registrar consumo',
+        Text('Registrar consumo',
             style: TextStyle(
-                fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1A2E6E))),
+                fontSize: 16, fontWeight: FontWeight.w600, color: c.textPrimary)),
         const SizedBox(height: 12),
         Row(
           children: [
+            // Botón +250 ml
             _WaterButton(
               label: '+250 ml',
-              ml: 250,
-              bg: const Color(0xFFD6E4FF),
-              fg: const Color(0xFF2D5BE3),
+              bg: c.statBlue,
+              fg: isDark ? Colors.white : AppTheme.primary,
               onTap: () => onLogWater(250),
             ),
             const SizedBox(width: 10),
+            // Botón +500 ml
             _WaterButton(
               label: '+500 ml',
-              ml: 500,
-              bg: const Color(0xFF4A90D9),
+              bg: AppTheme.primaryLight,
               fg: Colors.white,
               onTap: () => onLogWater(500),
             ),
             const SizedBox(width: 10),
+            // Botón +1 L (Se adapta dinámicamente al modo oscuro)
             _WaterButton(
               label: '+1 L',
-              ml: 1000,
-              bg: const Color(0xFF1A2E6E),
+              bg: isDark ? AppTheme.primary : const Color(0xFF1A2E6E),
               fg: Colors.white,
               onTap: () => onLogWater(1000),
             ),
@@ -51,14 +55,12 @@ class WaterButtonsSection extends StatelessWidget {
 
 class _WaterButton extends StatelessWidget {
   final String label;
-  final int ml;
   final Color bg;
   final Color fg;
   final VoidCallback onTap;
 
   const _WaterButton({
     required this.label,
-    required this.ml,
     required this.bg,
     required this.fg,
     required this.onTap,
@@ -66,6 +68,8 @@ class _WaterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -76,7 +80,7 @@ class _WaterButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: bg.withOpacity(0.4),
+                color: bg.withValues(alpha: isDark ? 0.1 : 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               )
