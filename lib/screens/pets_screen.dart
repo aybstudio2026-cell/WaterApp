@@ -58,14 +58,43 @@ class _PetsScreenState extends State<PetsScreen> {
     }
   }
 
-  void _prefetchImages(List allPets) {
+  Future<void> _prefetchImages(List allPets) async {
     for (final pet in allPets) {
-      final p = pet as Map<String, dynamic>;
-      final slug = p['slug'] ?? '';
-      if (p['base_url'] != null) CacheService.downloadAndCacheImage(p['base_url'], '${slug}_normal');
-      if (p['hydrated_url'] != null) CacheService.downloadAndCacheImage(p['hydrated_url'], '${slug}_hydrated');
-      if (p['dehydrated_url'] != null) CacheService.downloadAndCacheImage(p['dehydrated_url'], '${slug}_dehydrated');
+      final petData = pet as Map<String, dynamic>;
+      final slug = petData['slug'] as String? ?? petData['id'].toString();
+
+      // 1. Verificar y descargar imagen BASE
+      if (petData['base_url'] != null) {
+        final key = '${slug}_base';
+        // Verificamos si ya está guardada localmente
+        final exists = CacheService.getCachedImage(key) != null;
+        if (!exists) {
+          debugPrint('📥 Descargando imagen base para: $slug');
+          await CacheService.downloadAndCacheImage(petData['base_url'], key);
+        }
+      }
+
+      // 2. Verificar y descargar imagen HIDRATADA
+      if (petData['hydrated_url'] != null) {
+        final key = '${slug}_hydrated';
+        final exists = CacheService.getCachedImage(key) != null;
+        if (!exists) {
+          debugPrint('📥 Descargando imagen hidratada para: $slug');
+          await CacheService.downloadAndCacheImage(petData['hydrated_url'], key);
+        }
+      }
+
+      // 3. Verificar y descargar imagen DESHIDRATADA
+      if (petData['dehydrated_url'] != null) {
+        final key = '${slug}_dehydrated';
+        final exists = CacheService.getCachedImage(key) != null;
+        if (!exists) {
+          debugPrint('📥 Descargando imagen deshidratada para: $slug');
+          await CacheService.downloadAndCacheImage(petData['dehydrated_url'], key);
+        }
+      }
     }
+    debugPrint('✅ Control de caché de mascotas finalizado limpiamente.');
   }
 
   Future<void> _purchasePet(String petId) async {
@@ -75,7 +104,7 @@ class _PetsScreenState extends State<PetsScreen> {
     try {
       await Supabase.instance.client.schema('waterapp').rpc('purchase_pet', params: {'p_user_id': uid, 'p_pet_id': petId});
       await _loadPets();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('¡Mascota desbloqueada! 🎉'), backgroundColor: Color(0xFF2D7A4F)));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('¡Mascota desbloqueada! 🎉'), backgroundColor: Color(0xFF2D7A4F)));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent));
     } finally {
@@ -92,7 +121,9 @@ class _PetsScreenState extends State<PetsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('¡Mascota seleccionada! 🐾'), backgroundColor: Color(0xFF4A90D9)));
         Future.delayed(const Duration(milliseconds: 600), () {
-          if (mounted) Navigator.of(context).pushNamed('/dashboard');
+          if (mounted) {
+            Navigator.of(context).pushNamedAndRemoveUntil('/dashboard', (route) => false);
+          }
         });
       }
     } catch (e) {

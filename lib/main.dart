@@ -79,12 +79,12 @@ class _SplashGateState extends State<_SplashGate> {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     return Scaffold(
-      backgroundColor: c.bg,
+      backgroundColor: c.bg, // Se adapta dinámicamente al fondo del tema activo
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.water_drop, size: 72, color: Color(0xFF4A90D9)),
+            const Icon(Icons.water_drop, size: 72, color: AppTheme.primaryLight), // Color de ícono unificado
             const SizedBox(height: 16),
             Text('WaterApp',
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: c.textPrimary)),
@@ -92,7 +92,7 @@ class _SplashGateState extends State<_SplashGate> {
             Text('A&B Studio',
                 style: TextStyle(fontSize: 14, color: c.textMuted)),
             const SizedBox(height: 40),
-            const CircularProgressIndicator(color: Color(0xFF4A90D9), strokeWidth: 2),
+            const CircularProgressIndicator(color: AppTheme.primaryLight, strokeWidth: 2), // Loader unificado
           ],
         ),
       ),

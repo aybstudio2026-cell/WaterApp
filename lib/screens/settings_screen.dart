@@ -3,7 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../main.dart';
 import '../theme/app_theme.dart';
 import '../widgets/settings_account_section.dart';
-import '../widgets/settings_premium_banner.dart';
 import '../widgets/settings_appearance_section.dart';
 import '../widgets/settings_hydration_section.dart';
 import '../widgets/settings_schedules_section.dart';
@@ -52,12 +51,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       final profile    = results[0] as Map<String, dynamic>?;
       final profilePub = results[1] as Map<String, dynamic>?;
-      final sub        = results[2] as Map<String, dynamic>?;
 
       setState(() {
         _email         = user.email ?? '';
         _balance       = (profilePub?['balance'] as int?) ?? 0;
-        _isPremium     = sub != null;
         _weightKg      = (profile?['weight_kg'] as num?)?.toDouble() ?? 70;
         _activityLevel = profile?['activity_level'] ?? 'medium';
         _loading       = false;
@@ -243,12 +240,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // ── SECCIÓN CUENTA ──
               SettingsAccountSection(email: _email, balance: _balance, isPremium: _isPremium),
               const SizedBox(height: 12),
-
-              // Banner Premium Conditional
-              if (!_isPremium) ...[
-                SettingsPremiumBanner(onTap: _showPremiumModal),
-                const SizedBox(height: 20),
-              ],
 
               // ── SECCIÓN APARIENCIA ──
               const SettingsAppearanceSection(),

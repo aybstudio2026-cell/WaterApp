@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import 'cached_pet_image.dart'; // Importamos tu nuevo widget de caché inteligente
 import 'dashboard_progress_ring.dart';
 
 class PetCard extends StatelessWidget {
   final String? petImageUrl;
+  final String? petCacheKey; // NUEVO: Clave única para leer la imagen desde Hive
   final int totalMl;
   final int goalMl;
   final String statusText;
@@ -12,6 +14,7 @@ class PetCard extends StatelessWidget {
   const PetCard({
     super.key,
     required this.petImageUrl,
+    required this.petCacheKey, // REQUERIDO: Se pasa desde el Dashboard
     required this.totalMl,
     required this.goalMl,
     required this.statusText,
@@ -30,12 +33,12 @@ class PetCard extends StatelessWidget {
         ? (isDark ? const Color(0xFF63E6BE) : const Color(0xFF2D7A4F))
         : pct >= 0.4
         ? AppTheme.primaryLight
-        : const Color(0xFFEF4444); // Rojo más balanceado para pantallas oscuras
+        : const Color(0xFFEF4444);
 
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: c.card, // Blanco en Light, Gris azulado en Dark
+        color: c.card,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -47,17 +50,11 @@ class PetCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Mascota
-          SizedBox(
+          // LÓGICA MODIFICADA: Ahora la mascota consume bytes locales de Hive/Memoria de forma reactiva
+          CachedPetImage(
+            url: petImageUrl,
+            cacheKey: petCacheKey,
             height: 140,
-            child: petImageUrl != null && petImageUrl!.isNotEmpty
-                ? Image.network(
-              petImageUrl!,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) =>
-              const Icon(Icons.pets, size: 80, color: AppTheme.primaryLight),
-            )
-                : const Icon(Icons.pets, size: 80, color: AppTheme.primaryLight),
           ),
           const SizedBox(height: 24),
 

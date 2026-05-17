@@ -24,7 +24,6 @@ class PetsGridCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
-    final isFree = pet['is_free'] as bool? ?? false;
     final price = pet['price'] as int? ?? 0;
 
     return AnimatedContainer(
@@ -56,7 +55,8 @@ class PetsGridCard extends StatelessWidget {
             Expanded(
               child: pet['base_url'] != null
                   ? FutureBuilder<Uint8List?>(
-                future: CacheService.getImage(pet['base_url'] as String, '${pet['slug']}_normal'),
+                // CORRECCIÓN: Apuntamos al key correcto '_base' que definimos en tu prefetch
+                future: CacheService.getImage(pet['base_url'] as String, '${pet['slug']}_base'),
                 builder: (_, snapshot) {
                   if (snapshot.hasData && snapshot.data != null) return Image.memory(snapshot.data!, fit: BoxFit.contain);
                   return const Center(child: CircularProgressIndicator(color: AppTheme.primaryLight, strokeWidth: 2));
@@ -86,11 +86,11 @@ class PetsGridCard extends StatelessWidget {
                   : ElevatedButton(
                 onPressed: onPurchase,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isFree ? AppTheme.secondary : AppTheme.primary, // Usamos AppTheme.primary adaptativo en vez del azul fijo anterior
+                  backgroundColor: AppTheme.primary,
                   foregroundColor: Colors.white,
                   elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                child: Text(isFree ? 'Gratis' : '$price coins', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                child: Text(price == 0 ? 'Gratis' : '$price 🪙', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
               ),
             ),
           ],

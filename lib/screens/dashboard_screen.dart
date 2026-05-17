@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../theme/app_theme.dart'; // Importante para acceder a AppColors y AppTheme
+import '../theme/app_theme.dart';
 import '../widgets/dashboard_header.dart';
 import '../widgets/dashboard_pet_card.dart';
 import '../widgets/dashboard_water_buttons.dart';
@@ -25,8 +25,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _goalMl = 2000;
   int _streak = 0;
   bool _loading = false;
-  String? _petImageUrl;
   int _selectedIndex = 0;
+
+  // Guardamos el mapa completo de estados de la mascota activa
+  Map<String, dynamic>? _activePetData;
 
   @override
   void initState() {
@@ -83,16 +85,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .rpc('get_daily_goal', params: {'p_user_id': uid});
 
       final nowUtc = DateTime.now().toUtc();
-      final startOfDayUtc = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day)
+
+      // Ampliamos el rango para traer logs desde el inicio de AYER hasta el fin de HOY
+      final startOfYesterdayUtc = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day)
+          .subtract(const Duration(days: 1))
           .toIso8601String();
       final endOfDayUtc = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day, 23, 59, 59)
           .toIso8601String();
 
       final logsRes = await db
           .from('logs')
-          .select('amount_ml')
+          .select('amount_ml, logged_at')
           .eq('user_id', uid)
-          .gte('logged_at', startOfDayUtc)
+          .gte('logged_at', startOfYesterdayUtc)
           .lte('logged_at', endOfDayUtc);
 
       final streakRes = await db
@@ -107,33 +112,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .eq('user_id', uid)
           .maybeSingle();
 
-      final total = (logsRes as List)
-          .fold<int>(0, (sum, l) => sum + (l['amount_ml'] as int));
       final goal = goalRes ?? 2000;
-      final pct = goal > 0 ? total / goal : 0.0;
 
-      String? petUrl;
+      // Separar el agua consumida ayer y hoy usando fechas locales del dispositivo
+      final nowLocal = DateTime.now();
+      final todayKey = '${nowLocal.year}-${nowLocal.month.toString().padLeft(2,'0')}-${nowLocal.day.toString().padLeft(2,'0')}';
+
+      final yestLocal = nowLocal.subtract(const Duration(days: 1));
+      final yesterdayKey = '${yestLocal.year}-${yestLocal.month.toString().padLeft(2,'0')}-${yestLocal.day.toString().padLeft(2,'0')}';
+
+      int totalToday = 0;
+      int totalYesterday = 0;
+
+      for (final log in logsRes as List) {
+        final dt = DateTime.parse(log['logged_at']).toLocal();
+        final key = '${dt.year}-${dt.month.toString().padLeft(2,'0')}-${dt.day.toString().padLeft(2,'0')}';
+
+        if (key == todayKey) {
+          totalToday += log['amount_ml'] as int;
+        } else if (key == yesterdayKey) {
+          totalYesterday += log['amount_ml'] as int;
+        }
+      }
+
+      // Lógica de validación de racha instantánea
+      int currentStreak = streakRes?['current_streak'] ?? 0;
+
+      if (totalYesterday < goal) {
+        currentStreak = (totalToday >= goal) ? 1 : 0;
+      }
+
+      // CORRECCIÓN AQUÍ: Declaramos petData correctamente asignando la respuesta de la DB
+      Map<String, dynamic>? petData;
       if (profileRes != null && profileRes['active_pet_id'] != null) {
-        final petRes = await db
+        petData = await db
             .from('pets')
-            .select('base_url, hydrated_url, dehydrated_url')
+            .select('id, slug, base_url, hydrated_url, dehydrated_url')
             .eq('id', profileRes['active_pet_id'])
             .maybeSingle();
-
-        if (petRes != null) {
-          petUrl = pct >= 0.8
-              ? petRes['hydrated_url']
-              : pct >= 0.4
-              ? petRes['base_url']
-              : petRes['dehydrated_url'];
-        }
       }
 
       setState(() {
         _goalMl = goal;
-        _totalMl = total;
-        _streak = streakRes?['current_streak'] ?? 0;
-        _petImageUrl = petUrl;
+        _totalMl = totalToday;
+        _streak = currentStreak;
+        _activePetData = petData; // Ahora sí existe perfectamente
         _loading = false;
       });
     } catch (e) {
@@ -142,9 +165,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  // Nueva función que calcula en tiempo real qué URL usar según el progreso actual
+  String? _getCurrentPetImageUrl() {
+    if (_activePetData == null) return null;
+    final pct = _goalMl > 0 ? (_totalMl / _goalMl) : 0.0;
+
+    if (pct >= 0.8) return _activePetData!['hydrated_url'] as String?;
+    if (pct >= 0.4) return _activePetData!['base_url'] as String?;
+    return _activePetData!['dehydrated_url'] as String?;
+  }
+
+  String? _getCurrentPetCacheKey() {
+    if (_activePetData == null) return null;
+    final slug = _activePetData!['slug'] as String? ?? _activePetData!['id'].toString();
+    final pct = _goalMl > 0 ? (_totalMl / _goalMl) : 0.0;
+
+    if (pct >= 0.8) return '${slug}_hydrated';
+    if (pct >= 0.4) return '${slug}_base';
+    return '${slug}_dehydrated';
+  }
+
   Future<void> _logWater(int ml) async {
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
+
+    // Actualización optimista e instantánea
+    final wasGoalMet = _totalMl >= _goalMl;
+    final willBeGoalMet = (_totalMl + ml) >= _goalMl;
+
+    setState(() {
+      _totalMl += ml;
+      if (!wasGoalMet && willBeGoalMet) {
+        _streak += 1;
+      }
+    });
 
     final logData = {
       'id': DateTime.now().millisecondsSinceEpoch.toString(),
@@ -170,11 +224,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       } else {
         await CacheService.savePendingLog(logData);
 
-        setState(() {
-          _totalMl += ml;
-          _goalMl = _goalMl > 0 ? _goalMl : 2000;
-        });
-
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -193,14 +242,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _updateUIAfterLog(Map<String, dynamic> res) {
     final newTotal = res['total_today'] as int;
     final goal = res['goal'] as int;
-
-    if (res['goal_reached'] == true) {
-      setState(() => _streak = (res['current_streak'] ?? _streak) as int);
-    }
+    final dbStreak = res['current_streak'] as int?;
 
     setState(() {
       _totalMl = newTotal;
       _goalMl = goal;
+
+      if (dbStreak != null) {
+        _streak = dbStreak;
+      }
     });
   }
 
@@ -235,7 +285,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               children: [
                 PetCard(
-                  petImageUrl: _petImageUrl,
+                  petImageUrl: _getCurrentPetImageUrl(),
+                  petCacheKey: _getCurrentPetCacheKey(),
                   totalMl: _totalMl,
                   goalMl: _goalMl,
                   statusText: _getPetStatus(),
@@ -274,9 +325,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final c = AppColors.of(context); // Captura los colores adaptativos de tu ThemeExtension
+    final c = AppColors.of(context);
     return Scaffold(
-      backgroundColor: c.bg, // Cambia automáticamente de color entre modos
+      backgroundColor: c.bg,
       body: SafeArea(
         bottom: false,
         child: Column(

@@ -17,6 +17,16 @@ class CacheService {
     await Hive.openBox(_metadataBox);
   }
 
+  // ── HELPER DE PROTECCIÓN PARA WINDOWS/ONEDRIVE ──
+  /// Asegura que la caja de imágenes esté abierta antes de operar con ella
+  static Future<Box> _getImagesBox() async {
+    if (!Hive.isBoxOpen(_imagesBox)) {
+      debugPrint('⚠️ La caja de imágenes estaba cerrada (posible bloqueo de OneDrive). Reabriendo...');
+      return await Hive.openBox(_imagesBox);
+    }
+    return Hive.box(_imagesBox);
+  }
+
   // ── MASCOTAS ────────────────────────────────────
 
   /// Guarda todas las mascotas del catálogo
@@ -41,14 +51,12 @@ class CacheService {
   // ── IMÁGENES ────────────────────────────────────
 
   /// Descarga y guarda imagen en caché
-  static Future<Uint8List?> downloadAndCacheImage(
-      String url,
-      String key,
-      ) async {
+  static Future<Uint8List?> downloadAndCacheImage(String url, String key) async {
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
-        final box = Hive.box(_imagesBox);
+        // CORRECCIÓN: Usamos el método seguro para evitar colapsos por archivos cerrados
+        final box = await _getImagesBox();
         await box.put(key, response.bodyBytes);
         return response.bodyBytes;
       }
@@ -60,22 +68,23 @@ class CacheService {
 
   /// Obtiene imagen del caché (sin descargar)
   static Uint8List? getCachedImage(String key) {
+    if (!Hive.isBoxOpen(_imagesBox)) return null;
     final box = Hive.box(_imagesBox);
     return box.get(key) as Uint8List?;
   }
 
   /// Obtiene imagen: caché primero, si no existe descarga y cachea
-  static Future<Uint8List?> getImage(
-      String url,
-      String key,
-      ) async {
+  static Future<Uint8List?> getImage(String url, String key) async {
     var image = getCachedImage(key);
     if (image != null) return image;
     return downloadAndCacheImage(url, key);
   }
 
   /// Limpia caché de imágenes
-  static Future<void> clearImages() => Hive.box(_imagesBox).clear();
+  static Future<void> clearImages() async {
+    final box = await _getImagesBox();
+    await box.clear();
+  }
 
   // ── LOGS OFFLINE ────────────────────────────────
 
@@ -134,4 +143,3 @@ class CacheService {
     }
   }
 }
-
